@@ -1,0 +1,116 @@
+(if (fboundp 'normal-top-level-add-subdirs-to-load-path)
+	(let* ((my-lisp-dir "~/elisp/")
+	     (default-directory my-lisp-dir))
+	   (setq load-path (cons my-lisp-dir load-path))
+	   (normal-top-level-add-subdirs-to-load-path)))
+
+(require 'color-theme)
+;(require 'elisp/ecb/ecb.el)
+(color-theme-robin-hood)
+
+(set-face-font 'default "-xos4-terminus-medium-r-normal-*-12-120-72-72-c-60-iso8859-*")
+
+(server-start)
+(mouse-wheel-mode t)
+(menu-bar-mode -1)
+(tool-bar-mode -1)
+(scroll-bar-mode -1)
+(windmove-default-keybindings)
+
+(setq c-default-style "linux"
+      c-basic-offset 8)
+
+;; Short cuts
+(define-key global-map [f1] 'find-file)		     ;; F1 - OPEN
+(define-key global-map [f2] 'kill-buffer)	     ;; F1 - OPEN
+(define-key global-map [f5] 'goto-line)              ;; F5 - GOTO LINE NUMBER
+(define-key global-map [f6] 'ecb-activate)           ;; START ECB
+(define-key global-map [f7] 'ecb-toggle-ecb-windows) ;; Show and hide ECB
+(define-key global-map [f9] 'compile)                ;; F10 - COMPILE
+(define-key global-map [f10] 'next-error)            ;; F11 - NEXT ERROR
+(define-key global-map [f11] 'add-change-log-entry-other-window) ;; F12 - CHANGELOG ENTRY (NEW WINDOW)
+
+(define-key global-map (kbd "C-c C-c") 'comment-or-uncomment-region)
+
+;; F12 - CHANGE LOG
+(define-key global-map [C-tab] 'ecb-toggle-ecb-windows) ;; Show and hide ECB
+
+;; Allow easy customization of emacs without restarting it.
+(defun edit-dot-emacs ()
+  "Load the .emacs file into a buffer for editing."
+  (interactive)
+  (find-file "~/.emacs"))
+
+(defun reload-dot-emacs ()
+  "Save .emacs, if it is in a buffer, and reload it."
+  (interactive)
+  (if (bufferp (get-file-buffer "~/.emacs"))
+    (save-buffer (get-buffer "~/.emacs")))
+  (load-file "~/.emacs"))
+
+;; EMMS
+(add-to-list 'load-path "~/elisp/emms.git")
+(require 'emms-setup)
+(emms-devel)
+(emms-default-players)
+
+(setq emms-show-format "NP: %s")
+
+(require 'emms-mode-line)
+(require 'emms-mode-line-icon)
+
+(setq emms-playlist-buffer-name "*EMMS Playlist*"
+      emms-playlist-mode-open-playlists t)
+
+;; Stolen and adapted from TWB
+(defun my-emms-info-track-description (track)
+  "Return a description of the current track."
+  (if (and (emms-track-get track 'info-artist)
+	   (emms-track-get track 'info-title))
+      (let ((pmin (emms-track-get track 'info-playing-time-min))
+	    (psec (emms-track-get track 'info-playing-time-sec))
+	    (ptot (emms-track-get track 'info-playing-time))
+	    (art  (emms-track-get track 'info-artist))
+	    (tit  (emms-track-get track 'info-title)))
+	(cond ((and pmin psec) (format "%s - %s [%02d:%02d]" art tit pmin psec))
+	      (ptot (format  "%s - %s [%02d:%02d]" art tit (/ ptot 60) (% ptot 60)))
+	      (t (emms-track-simple-description track))))))
+
+(setq emms-track-description-function 'my-emms-info-track-description)
+
+(setq emms-info-asynchronously t)
+
+;; (emms-browser-make-filter "" (emms-browser-filter-only-dir "~/Desktop/Musica"))
+
+;; EMACS LINUX KERNEL STUFF
+(defun c-lineup-arglist-tabs-only (ignored)
+  "Line up argument lists by tabs, not spaces"
+  (let* ((anchor (c-langelem-pos c-syntactic-element))
+	 (column (c-langelem-2nd-pos c-syntactic-element))
+	 (offset (- (1+ column) anchor))
+	 (steps (floor offset c-basic-offset)))
+    (* (max steps 1)
+       c-basic-offset)))
+
+(add-hook 'c-mode-common-hook
+	  (lambda ()
+	    ;; Add kernel style
+	    (c-add-style
+	     "linux-tabs-only"
+	     '("linux" (c-offsets-alist
+			(arglist-cont-nonempty
+			 c-lineup-gcc-asm-reg
+			 c-lineup-arglist-tabs-only))))))
+
+(add-hook 'c-mode-hook
+	  (lambda ()
+	    (let ((filename (buffer-file-name)))
+	      ;; Enable kernel mode for the appropriate files
+	      (when (and filename
+			 (string-match (expand-file-name "~/projects/linux-2.6")
+				       filename))
+		(setq indent-tabs-mode t)
+		(c-set-style "linux-tabs-only")))))
+
+
+;; Fin EMMS
